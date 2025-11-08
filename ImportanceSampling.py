@@ -22,7 +22,7 @@ def var_new_estimator(N, f, rng, sigma):
        f = function
        rng = random number
        sigma = chosen std for g
-       output = estimated variance for the original sample
+       output = estimated variance after importance sampling
     """
     X_g   = sigma * rng.standard_normal(N)
     L_g   = sigma * np.exp(-(X_g**2/2)*(1 - 1/sigma**2))
