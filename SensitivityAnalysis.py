@@ -78,10 +78,14 @@ for lr in learning_rate:
         sigma_current = sigma_current - lr * grad_val       #formula from Asmussen and Glynn
 
         if sigma_current < 0.75:
-            sigma_current = 0.75
+            sigma_current = 0.75    #explained in my filed sent to you
+
+        # Recording the values for later use
         sigma_history.append(sigma_current)
         loss_history.append(h_val)
 
+        # Trying to find a pattern by snapshotting the sigma value and the average of h_val
+        # after 1000 runs
         if i % 1000 == 0:
             if i > 100:
                 avg_loss = np.mean(loss_history[-100:])
@@ -90,7 +94,8 @@ for lr in learning_rate:
                 print(f"Iteration {i}: sigma = {sigma_current:.4f}")
 
 
-# Goal 2:
+# Goal 2: I'm trying to show that I cannot find reliable optimal sigma value as the moment gets larger
+# by showing that the gradient noise gets big and very deviated from the true value
 k_max = 10       # n = 2k, <X^n> = <X^{2k}> is an even moment
 results = {}
 
