@@ -20,7 +20,7 @@ def m_func(X, sigma, k=K_PARAM):
         k = a variable that determines the moment: n = 2k, <X^n> = <X^{2k}> is an even moment
     """
     exponent = -np.power(X,2) * (1-1/np.power(sigma,2))
-    term1 = np.power(sigma,2) * np.exp(exponent)
+    term1 = np.power(sigma,2) * np.exp(np.clip(exponent, -np.inf, 700))
     term2 = np.power(X, 4*k)
     return term1 * term2
 
@@ -181,6 +181,7 @@ print('-'*100)
 
 
 for i in range(num_iternations):
+    # sampling X batch as N(0,sigma)
     X_batch = rng.standard_normal(batch_size) * sigma_current
 
     m_vals_batch = m_func(X_batch, sigma_current)
@@ -216,6 +217,7 @@ print('-'*100)
 
 
 for i in range(num_iternations):
+    # sampling Z batch as N(0,1)
     Z_batch = rng.standard_normal(batch_size)
 
     h_vals_batch = h_func(Z_batch, sigma_current)
@@ -245,11 +247,63 @@ print(f"Final sigma (avg of last 50 steps): {np.mean(sigma_history_batchz[-50:])
 
 
 
-# Goal 3: I'm trying to show that I cannot find reliable optimal sigma value as the moment gets larger
-# by showing that the gradient noise gets big and very deviated from the true value
+# Goal 3: I'm trying to show if I can find reliable optimal sigma value as the moment gets larger
 
 k_max = 10       # n = 2k, <X^n> = <X^{2k}> is an even moment
-results = []
+
+# Using X~N(0,1) method
+results2 = []
+
+for k in range(1, k_max + 1):
+    N = 50000
+    learning_rate = 0.001
+    batch_size = 50
+    num_iternations = N // batch_size
+    sigma_history = []
+
+    sigma_opt = get_optimal_sigma(k)
+    sigma_current = np.sqrt(2 * k)
+
+    for i in range(num_iternations):
+        # sampling X batch as N(0,sigma)
+        X_batch = rng.standard_normal(batch_size) * sigma_current
+
+        m_vals_batch = m_func(X_batch, sigma_current, k)
+        grad_vals_batch = grad_m_func(X_batch, sigma_current, m_vals_batch, k)
+
+        valid_grads = grad_vals_batch[~(np.isinf(grad_vals_batch) | np.isnan(grad_vals_batch))]
+
+        if not valid_grads.any():
+            print(f"k={k}, i={i}: All grads in batch overflowed! Skipping.")
+            continue
+
+        avg_gradient = np.mean(valid_grads)
+        clip_threshold = 10000
+        avg_gradient = np.clip(avg_gradient, -clip_threshold, clip_threshold)
+
+        sigma_current = sigma_current - learning_rate * avg_gradient
+
+        if sigma_current < 0.75:
+            sigma_current = 0.75
+
+        sigma_history.append(sigma_current)
+
+    sigma_final = np.mean(sigma_history[-50:])
+    abs_error = abs(sigma_final - sigma_opt)
+    results2.append((k, sigma_final, sigma_opt, abs_error))
+
+print("\n" + "="*60)
+print("--- FINAL RESULTS SUMMARY USING X~N(0,sigma)---")
+print("="*60)
+print(f"{'n (X^2n)':<10} | {'Sigma':<15} | {'Optimal Sigma':<15} | {'Absolute Error':<15}")
+print("-"*60)
+
+for res in results2:
+    n, found, opt, err = res
+    print(f"{n:<10} | {found:<15.4f} | {opt:<15.4f} | {err:<15.4f}")
+
+# Using Z~N(0,1) method
+results1 = []
 
 for k in range(1, k_max + 1):
     N = 50000
@@ -261,7 +315,7 @@ for k in range(1, k_max + 1):
     sigma_opt = get_optimal_sigma(k)
     sigma_current = np.sqrt(2 * k)
     for i in range(num_iternations):
-
+        # sampling Z batch as N(0,1)
         Z_batch = rng.standard_normal(batch_size)
 
         h_vals_batch = h_func(Z_batch, sigma_current, k)
@@ -286,14 +340,45 @@ for k in range(1, k_max + 1):
 
     sigma_final = np.mean(sigma_history[-50:])
     abs_error = abs(sigma_final - sigma_opt)
-    results.append((k, sigma_final, sigma_opt, abs_error))
+    results1.append((k, sigma_final, sigma_opt, abs_error))
 
 print("\n" + "="*60)
-print("--- FINAL RESULTS SUMMARY ---")
+print("--- FINAL RESULTS SUMMARY USING Z~N(0,1)---")
 print("="*60)
 print(f"{'n (X^2n)':<10} | {'Sigma':<15} | {'Optimal Sigma':<15} | {'Absolute Error':<15}")
 print("-"*60)
 
-for res in results:
+for res in results1:
     n, found, opt, err = res
     print(f"{n:<10} | {found:<15.4f} | {opt:<15.4f} | {err:<15.4f}")
+
+
+# Goal 4: Diagnostics--I'm trying to show that I cannot find reliable
+# optimal sigma value as the moment gets larger
+# by showing that the gradient noise gets big and very deviated from the true value
+
+print(f"\nGradient Variance for each n using X~N(0,sigma)")
+epsilons1 = rng.standard_normal(N_batch)
+
+for k in range(1, k_max + 1):
+    sigma_opt = get_optimal_sigma(k)
+
+    X = epsilons1 * sigma_opt
+    m_vals = m_func(X, sigma_opt, k)
+    grad_vals = grad_m_func(X, sigma_opt, m_vals, k)
+
+    noise_variance = np.var(grad_vals)
+
+    print(f"X^{2*k} (sigma_opt = {sigma_opt:.3f}): Gradient Variance = {noise_variance:.4e}")
+
+print(f"\nGradient Variance for each n using Z~N(0,1)")
+epsilons2 = rng.standard_normal(N_batch)
+
+for k in range(1, k_max + 1):
+    sigma_opt = get_optimal_sigma(k)
+    h_vals = h_func(epsilons2, sigma_opt, k)
+    grad_vals = grad_h_func(epsilons2, sigma_opt, h_vals, k)
+
+    noise_variance = np.var(grad_vals)
+
+    print(f"X^{2*k} (sigma_opt = {sigma_opt:.3f}): Gradient Variance = {noise_variance:.4e}")
