@@ -12,6 +12,13 @@ import math
 
 K_PARAM = 1
 
+def get_optimal_sigma(k):
+    """
+        Returns the analytical optimal sigma for a given k.
+    """
+    return np.sqrt(2*k + 1)
+
+# Method 1: The "X" Method (LRM)
 def m_func(X, sigma, k=K_PARAM):
     """
         x = N(0, sigma)
@@ -24,7 +31,7 @@ def m_func(X, sigma, k=K_PARAM):
     term2 = np.power(X, 4*k)
     return term1 * term2
 
-def grad_m_func(x, sigma, m_func, k=K_PARAM):
+def grad_m_func(x, sigma, m_val, k=K_PARAM):
     """
         x = N(0, sigma)
         sigma = the std for g, and we are trying various values to find the optimal
@@ -33,9 +40,9 @@ def grad_m_func(x, sigma, m_func, k=K_PARAM):
         k = a variable that determines the moment: n = 2k, <X^n> = <X^{2k}> is an even moment
     """
     term1 = (np.power(sigma, 2) - np.power(x,2)) / np.power(sigma, 3)
-    return term1 * m_func
+    return term1 * m_val
 
-
+# Method 2: The "Z" Method (Reparametrization)
 def h_func(Z, sigma, k=K_PARAM):
     """
         Z = standard normal distributed variable
@@ -63,12 +70,6 @@ def grad_h_func(Z, sigma, h_func, k=K_PARAM):
     term2 = 2 * sigma * np.power(Z, 2)
     gradient = (term1 - term2) * h_func
     return gradient
-
-def get_optimal_sigma(k):
-    """
-        Returns the analytical optimal sigma for a given k.
-    """
-    return np.sqrt(2*k + 1)
 
 #-------  Main program -----------------------
 
