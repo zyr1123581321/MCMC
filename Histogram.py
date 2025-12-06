@@ -1,5 +1,5 @@
 #Code author: Yunru Zheng
-#Date: November 14, 2025
+#Date: November 28, 2025
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -7,9 +7,6 @@ import math
 
 RNG = np.random.default_rng(17)
 N_SAMPLES = 50000
-
-
-
 
 def histogram(sample, sample_name="Distribution", num_bins=30):
     """

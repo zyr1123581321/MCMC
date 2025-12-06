@@ -4,6 +4,20 @@
 import numpy as np
 import math
 
+
+def mean_estimator(N, f, rng)
+    """docstring
+       N = number of
+       f = function
+       rng = random number
+       output = estimated variance for the original sample
+    """
+    X_f   = rng.standard_normal(N)
+    Y_f   = f(X_f)
+    mean_f = np.mean(Y_f)         #old variable
+    return mean_f
+
+
 def var_estimator(N, f, rng):
     """docstring
        N = number of 
