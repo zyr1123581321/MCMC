@@ -3,9 +3,6 @@
 
 import numpy as np
 import math
-import jax
-import jax.numpy as jnp
-from jax import grad
 
 K_PARAM = 1
 
@@ -29,10 +26,23 @@ def g(x, sigma):
     """
     return 1/np.sqrt(2*math.pi*sigma**2) * np.exp(-x**2/(2*sigma**2))
 
+def score_func(X, sigma):
+    """
+    The score function is partial_{sigma}log f(x,sigma)
+    """
+    return (1/sigma) * (X**2/sigma**2 - 1)
+
+def likelihood_ratio(X, sigma):
+    """
+    The likelihood ratio is f(X)/g(X, sigma)
+    """
+    exponent = -0.5 * X**2 * (1 - 1/sigma**2)
+    return sigma * np.exp(exponent)
+
 # Method 1: The "X" Method (LRM)
 def m_func(X, sigma, k=K_PARAM):
     """
-    m(X, sigma) = f^2(X)/g(X,sigma)*X^{4*n}
+    m(X, sigma) = f^2(X)/g^2(X,sigma)*X^{4*n}
     = sigma^2 * e^{-x^2*(1-1/sigma^2)}*X^{4*n}
         x = N(0, sigma)
         sigma = the std for g, and we are trying various values to find the optimal
@@ -54,7 +64,7 @@ def grad_m_func(x, sigma, m_val, k=K_PARAM):
         m_func = the m function and we are finding the gradient as it multiplying some value
         k = a variable that determines the moment: n = 2k, <X^n> = <X^{2k}> is an even moment
     """
-    term1 = (np.power(sigma, 2) - np.power(x,2)) / np.power(sigma, 3)
+    term1 = (np.power(sigma, 2) - np.power(x, 2)) / np.power(sigma, 3)
     return term1 * m_val
 
 

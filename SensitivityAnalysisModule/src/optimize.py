@@ -12,9 +12,19 @@ RNG = np.random.default_rng(17)
 # HELPER FUNCTION:
 # is_reparam = True corresponds to Z method, and False for X method
 
-def run_sgd_optimization(k, grad_func, loss_func, batch_size, learning_rate, is_reparam=True):
+def run_sgd_optimization(k, grad_func, loss_func, batch_size,
+    learning_rate, is_reparam=True, num_iterations=None, start_sigma=None):
+    if start_sigma is None:
+        sigma_current = np.sqrt(2 * k) # Default heuristic start
+    else:
+        sigma_current = start_sigma    # Manual override (e.g., 1.0 for Ex 4)
+
+    if num_iterations is None:
+        # Default to full epoch if not specified
+        # Assumes N_SAMPLES is a global constant, or you can add it as an arg
+        num_iterations = N_SAMPLES // batch_size
+
     sigma_opt = get_optimal_sigma(k)    # the optimal value sigma = \sqrt{2k+1}
-    sigma_current = np.sqrt(2 * k)      # start slightly off from the optimal sigma value
 
     sigma_history = []
     loss_history = []
@@ -23,9 +33,8 @@ def run_sgd_optimization(k, grad_func, loss_func, batch_size, learning_rate, is_
     # Batch=1   -> 50,000 steps
     # Batch=50  ->  1,000 steps
 
-    num_iternations = N_SAMPLES // batch_size
 
-    for i in range(num_iternations):
+    for i in range(num_iterations):
         # 1. Generate Batch
         raw_samples = RNG.standard_normal(batch_size)
 
