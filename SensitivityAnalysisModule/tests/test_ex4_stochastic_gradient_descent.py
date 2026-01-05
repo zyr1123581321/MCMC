@@ -23,12 +23,12 @@ experiments = [
     },
     # Figure 6: Large Learning Rate, Batch 100
     {
-        "title": "Figure 4: t=0.004, Batch=1 (Smoother)",
+        "title": "Figure 6: t=0.004, Batch=100 (Smoother)",
         "lr": 0.004, "batch": 100, "steps": 100, "ylim": (0.0, 4.0)
     },
     # Figure 7: Small Learning Rate, Batch 1000
     {
-        "title": "Figure 4: t=0.004, Batch=1 (Smoothest)",
+        "title": "Figure 7: t=0.001, Batch=1000 (Smoothest)",
         "lr": 0.001, "batch": 1000, "steps": 900, "ylim": (0.0, 4.0)
     },
 ]
