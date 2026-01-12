@@ -3,6 +3,7 @@
 
 import numpy as np
 import math
+from scipy import stats
 from .model import get_optimal_sigma
 
 N_SAMPLES = 50000
@@ -33,7 +34,6 @@ def run_sgd_optimization(k, grad_func, loss_func, batch_size,
     # Batch=1   -> 50,000 steps
     # Batch=50  ->  1,000 steps
 
-
     for i in range(num_iterations):
         # 1. Generate Batch
         raw_samples = RNG.standard_normal(batch_size)
@@ -57,7 +57,7 @@ def run_sgd_optimization(k, grad_func, loss_func, batch_size,
             loss_history.append(loss_history[-1] if loss_history else 0)
             continue
 
-        avg_grad = np.mean(valid_grads)
+        avg_grad = stats.trim_mean(valid_grads, 0.2)
         avg_grad = np.clip(avg_grad, -CLIP_THRESHOLD, CLIP_THRESHOLD)
 
         # 4. Update

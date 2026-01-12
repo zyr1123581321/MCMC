@@ -1,3 +1,6 @@
+#Code author: Yunru Zheng
+#Date: January 5, 2025
+
 import numpy as np
 import matplotlib.pyplot as plt
 from src.utils import var_new_estimator

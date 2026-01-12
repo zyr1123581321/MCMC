@@ -1,3 +1,6 @@
+#Code author: Yunru Zheng
+#Date: January 6, 2025
+
 import numpy as np
 import matplotlib.pyplot as plt
 import jax
@@ -16,9 +19,9 @@ def phi(z, a, b, c, d):
 
 
 a = 1.0
-b = 3.9
+b = 0.45
 c = 2.0
-d = 1.0
+d = 0.3
 
 Z = RNG.standard_normal(N_SAMPLES)
 X = phi(Z, a, b, c, d)
@@ -40,7 +43,7 @@ plt.show()
 
 
 plt.figure(figsize=(10, 6))
-plt.hist(X, bins=200, density=True, alpha=0.5, label="neural net")
+plt.hist(X, bins=100, density=True, alpha=0.5, label="neural net")
 plt.title(f"The distribution of the neural net (N={N_SAMPLES})")
 plt.xlabel("X")
 plt.ylabel("Density")

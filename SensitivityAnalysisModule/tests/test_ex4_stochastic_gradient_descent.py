@@ -13,22 +13,22 @@ SIGMA = 1
 experiments = [
     # Figure 4: Large Learning Rate, No Batch
     {
-        "title": "Figure 4: t=0.004, Batch=1 (High Noise)",
+        "title": "t=0.004, Batch=1 (High Noise)",
         "lr": 0.004, "batch": 1, "steps": 200, "ylim": (1.0, 4.0)
     },
     # Figure 5: Small Learning Rate, No Batch
     {
-        "title": "Figure 5: t=0.001, Batch=1 (Smaller Noise)",
+        "title": "t=0.001, Batch=1 (Smaller Noise)",
         "lr": 0.001, "batch": 1, "steps": 800, "ylim": (1.0, 4.0)
     },
     # Figure 6: Large Learning Rate, Batch 100
     {
-        "title": "Figure 6: t=0.004, Batch=100 (Smoother)",
+        "title": "t=0.004, Batch=100 (Smoother)",
         "lr": 0.004, "batch": 100, "steps": 100, "ylim": (0.0, 4.0)
     },
     # Figure 7: Small Learning Rate, Batch 1000
     {
-        "title": "Figure 7: t=0.001, Batch=1000 (Smoothest)",
+        "title": "t=0.001, Batch=1000 (Smoothest)",
         "lr": 0.001, "batch": 1000, "steps": 900, "ylim": (0.0, 4.0)
     },
 ]
@@ -37,6 +37,11 @@ experiments = [
 def generate_plots():
 
     for exp in experiments:
+        lr = exp["lr"]
+        batch = exp["batch"]
+        steps = exp["steps"]
+        ylim = exp["ylim"]
+
         print(f"Generating {exp['title']}")
 
         # New plot
@@ -55,7 +60,9 @@ def generate_plots():
                 start_sigma=1.0)
             plt.plot(history, linewidth=1.5, alpha=0.6)
 
-        plt.title(exp["title"], fontsize=12, fontweight='bold')
+        title = "t={t:7.3f} m={m:6d}"
+        title = title.format(t=exp["lr"], m=exp["batch"])
+        plt.title(title, fontsize=12, fontweight='bold')
         plt.xlabel("Iteration Number")
         plt.ylabel("Sigma")
         plt.ylim(exp["ylim"])
