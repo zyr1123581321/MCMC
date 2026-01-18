@@ -3,7 +3,9 @@
 
 import numpy as np
 import math
-from .model import get_optimal_sigma
+import matplotlib.pyplot as plt
+from .model import get_optimal_sigma, make_g_function
+
 
 
 def mean_estimator(N, V, rng):
@@ -128,3 +130,57 @@ def calculate_gradient_variance(k, raw_samples, loss_func, grad_func, is_reparam
         return np.var(valid_grads)
     else:
         return np.inf # Represent exploded variance as infinity
+
+
+# Batman importance sampling
+
+def neural_net_plot(Z_space, theta, phi):
+    """
+    Plotting the results going through a neural net (X vs Z)
+    Input:
+        Z_space: The linspace of Z
+        theta: Parameters for the transformation function
+        phi: Transformation function phi(z, theta)
+    """
+    plt.figure(figsize=(10, 6))
+    plt.plot(Z_space, phi(Z_space, theta), label='estimation variance')
+    plt.title(f"The effect of the neural net on Z")
+    plt.xlabel("Z")
+    plt.ylabel("X")
+    plt.grid(True, alpha=0.3)
+
+    plt.legend()
+    plt.show()
+
+def batman_plot(Z_space, theta, f, phi, n_samples, rng):
+    """
+    Plotting the batman plot given the parameters
+    Input:
+        Z_space: The linspace of Z
+        theta: Parameters for the transformation function
+        f: pdf of Z
+        phi: Transformation function phi(z, theta)
+        n_samples: Total sample size
+        rng: the random number seed
+    """
+    Z = rng.standard_normal(n_samples)
+    X = phi(Z, theta)
+    fast_g_fn = make_g_function(f, phi)
+
+    X_theoretical = phi(Z_space, theta)
+    Y_theoretical = fast_g_fn(Z_space, theta)
+
+    plt.figure(figsize=(10, 6))
+
+    # The histogram of X
+    plt.hist(X, bins=100, density=True, alpha=0.5, label="Empirical Histogram")
+
+    # The pdf of X
+    plt.plot(X_theoretical, Y_theoretical, label="Theoretical pdf")
+    plt.title(f"The distribution of the neural net (N={n_samples})")
+    plt.xlabel("X")
+    plt.ylabel("Density")
+    plt.grid(True, alpha=0.3)
+
+    plt.legend()
+    plt.show()
