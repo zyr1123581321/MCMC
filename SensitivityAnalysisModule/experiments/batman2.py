@@ -11,15 +11,13 @@ from jax import grad, vmap, jit
 from jax.scipy.stats import norm
 from scipy import stats
 
-from src.model import f_jax, softmax, phi, make_g_function, make_likelihood_ratio, \
+from src.model import f_jax, phi, make_g_function, make_likelihood_ratio, \
  make_score_function, loss_function, gradient_loss, Robbins_Monro
 from src.utils import neural_net_plot, batman_plot
 
 N_SAMPLES = 10000000
 RNG = np.random.default_rng(17)
 CLIP_THRESHOLD = 100.0
-
-
 
 #----------------------------Main Program---------------------------
 # Goal1: Finding the distribution after neural net and check that the distribution
@@ -29,26 +27,30 @@ a = 1.0
 b = 0.45
 c = 2.0
 d = 0.3
-
 #a, b, c, d = 2.0, 0.45, 2.0, 0.15
 #a, b, c, d = 1.5955062, 0.45257553, 2.5, 0.20656002
-a, b, c, d = 1.5, 0.4, 1.0, 0.2
+#a, b, c, d = 1.5, 0.4, 1.0, 0.2
+
+a, b, c, d = 2.0, 0.5, 1.0, 0.2
+#
 
 theta = jnp.array([a, b, c, d])
 Z_space = np.linspace(-6.0, 6.0, 100)
 
 
 # X as a function of Z (X vs Z)
-neural_net_plot(Z_space, theta, phi)
+#neural_net_plot(Z_space, theta, phi)
 
 # Plot histogram and pdf
-batman_plot(Z_space, theta, f_jax, phi, N_SAMPLES, RNG)
+#batman_plot(Z_space, theta, f_jax, phi, N_SAMPLES, RNG)
 
 # Goal2: Trying to find the optimized theta to get a batman graph
 
 V = lambda z: z**4
 
-learning_rate = 0.0001
+learning_rate = 0.0005
+
+
 batch_size = 1000
 num_iterations = N_SAMPLES // batch_size
 theta_history = []
@@ -91,10 +93,31 @@ for i in range(num_iterations):
         integral_estimate = jnp.mean(V(x_current)* L_current)
         print(f"Iter {i:>4}: Loss={mean_loss:.4f} | Estimate={integral_estimate:.4f}")
 
-# --- PLOTTING RESULTS ---
 theta_str = [f"{x:.2e}" for x in np.array(theta)]
-print(f"\nFinal Theta:, {theta_str}")
+print(f"\nFinal Theta:, {theta_str}, learning rate: {learning_rate}")
 
+# ---------- PLOTTING RESULTS ------------
+
+# 1. Process Data
+block_size = 100
+
+binned_loss = [np.mean(loss_history[i:i+block_size])
+            for i in range(0, len(loss_history), block_size)]
+
+# 2. Plot the Raw Data
+plt.figure(figsize=(10, 5))
+plt.plot(loss_history, color='lightblue', alpha=0.5, label='Raw Batch Noise')
+
+# 3. Plot the Smoothed Trend
+x_axis = np.arange(len(binned_loss)) * block_size
+plt.plot(x_axis, binned_loss, color='darkblue', linewidth=1.5, label='Smoothed Trend')
+
+plt.yscale('log')
+plt.title("Variance Reduction: Noise vs Trend")
+plt.legend()
+plt.show()
+
+'''
 # Plot Loss Curve
 plt.figure(figsize=(10, 5))
 plt.plot(loss_history)
@@ -104,6 +127,7 @@ plt.ylabel("Estimator Variance (Loss)")
 plt.yscale('log') # Log scale helps see progress better
 plt.grid(True)
 plt.show()
+'''
 
 # Goal3: Plotting the graph after optimization to see whether it's improved
 

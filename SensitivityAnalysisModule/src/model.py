@@ -117,7 +117,7 @@ def f_jax(x):
     """
     return 1/jnp.sqrt(2*math.pi) * jnp.exp(-x**2/2)
 
-def softmax(t):
+def softplus(t):
     """
     The softmax sigma function. I used h because symbol sigma was used
     Input:
@@ -141,7 +141,7 @@ def phi(z, theta):
         phi(z, theta) = 2*a*z - b(h((z-c)/d) - h((-z-c)/d))
     """
     a, b, c, d = theta
-    return 2*a*z - b*(softmax((z-c)/d) - softmax((-z-c)/d))
+    return 2*a*z - b*(softplus((z-c)/d) - softplus((-z-c)/d))
 
 
 def make_g_function(f, phi):
@@ -365,12 +365,47 @@ def Robbins_Monro(z_batch, theta, step_size, f, phi, V, L, score_fn, clip_thresh
     # 4. Clipping
     avg_grad = np.clip(avg_grad, -clip_threshold, clip_threshold)
 
+
     # 5. Update theta
     theta_new = theta - step_size * avg_grad
 
     # 6. CONSTRAINT CHOICES
     a_new, b_new, c_new, d_new = theta_new
 
+    '''
+    '''
+
+
+    # Attempt 2: b, d > 0, c >= 0.5, a <=5, 2a - b/d > 1 restricts b
+    # (so the tail doesn't cluster like crazy)
+    '''
+    d_new = jnp.maximum(d_new, 0.2)
+
+    c_new = jnp.maximum(c_new, 0.5)
+
+    min_a = 0.5 + b_new / (2.0 * d_new)
+    a_new = jnp.maximum(a_new, min_a)
+
+    # Restrict a instead of b
+    b_new = jnp.maximum(b_new, 0.1)
+    '''
+
+    # Attempt 3: b, d > 0, c >= 0.5, a <=5, 2a - b/d > 1 restricts b
+    # (so the tail doesn't cluster like crazy)
+
+    d_new = jnp.maximum(d_new, 0.1)
+
+    c_new = jnp.maximum(c_new, 0.5)
+
+    a_new = jnp.clip(a_new, 1.5, 3.0)
+
+    # Restrict b instead of a
+    max_b = d_new * (2.0 * a_new - 1.0)
+    b_new = jnp.clip(b_new, 0.0, max_b)
+
+
+
+    '''
     # Underconstruction because the choices of constraints here affect
     # how optimal theta is
 
@@ -400,6 +435,7 @@ def Robbins_Monro(z_batch, theta, step_size, f, phi, V, L, score_fn, clip_thresh
 
     # (Optional) Constraint C: b > 0 (slope decreases rather than increases)
     b_new = jnp.maximum(b_new, 0.1)
+    '''
 
     # 7. Formulating final theta
     theta_final = jnp.array([a_new, b_new, c_new, d_new])
