@@ -6,6 +6,11 @@ import math
 import matplotlib.pyplot as plt
 from .model import get_optimal_sigma, make_g_function
 
+# --- JAX (Automatic Differentiation & Compilation) ---
+import jax
+import jax.numpy as jnp
+from jax import grad, vmap, jit
+from jax.scipy.stats import norm
 
 
 def mean_estimator(N, V, rng):
@@ -184,3 +189,57 @@ def batman_plot(Z_space, theta, f, phi, n_samples, rng):
 
     plt.legend()
     plt.show()
+
+def plot_diagnostic(theta, phi, f, z_range=(-6, 6), n_points=1000):
+    """
+    Plots the "Zero Variance" diagnostic: y = x^4 * (f(x) / g(x))
+    A perfect model would result in a flat line at y = 3.0.
+    """
+    # 1. Prepare Data
+    z_space = jnp.linspace(z_range[0], z_range[1], n_points)
+
+    # 2. Define the components locally to ensure they match your logic
+    phi_grad = grad(phi, argnums=0) # dphi/dz
+
+    def get_diagnostic_value(z):
+        # Transform z to x
+        x = phi(z, theta)
+
+        # Compute g(x) = f(z) / |phi'(z)|
+        slope = jnp.abs(phi_grad(z, theta))
+        g_val = f(z) / slope
+
+        # Compute f(x) (Target density at x)
+        f_val = f(x)
+
+        # Likelihood Ratio: L = f(x) / g(x)
+        likelihood_ratio = f_val / g_val
+
+        # The Observable: h(x) = x^4
+        observable = x**4
+
+        # The Product: x^4 * L
+        return x, observable * likelihood_ratio
+
+    # Vectorize the calculation
+    vmap_diag = vmap(get_diagnostic_value)
+    x_vals, y_vals = vmap_diag(z_space)
+
+    # 3. Plotting
+    plt.figure(figsize=(10, 6))
+    plt.plot(x_vals, y_vals, color='purple', linewidth=2, label=r'Diagnostic: $x^4 \frac{f(x)}{g(x)}$')
+
+    # Add the "Perfect" reference line at y=3
+    plt.axhline(y=3.0, color='black', linestyle='--', alpha=0.5, label='Optimal (Constant = 3)')
+
+    # Formatting
+    plt.title("Zero Variance Diagnostic Check")
+    plt.xlabel("x (Transformed Value)")
+    plt.ylabel("Weighted Value")
+    plt.yscale('log') # Log scale is crucial because spikes can be huge
+    plt.grid(True, which="both", alpha=0.3)
+    plt.legend()
+    plt.show()
+
+# --- How to run it ---
+# plot_diagnostic(theta, phi, f_jax)

@@ -13,7 +13,7 @@ from scipy import stats
 
 from src.model import f_jax, phi, make_g_function, make_likelihood_ratio, \
  make_score_function, loss_function, gradient_loss, Robbins_Monro
-from src.utils import neural_net_plot, batman_plot
+from src.utils import neural_net_plot, batman_plot, plot_diagnostic
 
 N_SAMPLES = 10000000
 RNG = np.random.default_rng(17)
@@ -117,17 +117,6 @@ plt.title("Variance Reduction: Noise vs Trend")
 plt.legend()
 plt.show()
 
-'''
-# Plot Loss Curve
-plt.figure(figsize=(10, 5))
-plt.plot(loss_history)
-plt.title("Variance Reduction Training")
-plt.xlabel("Iteration")
-plt.ylabel("Estimator Variance (Loss)")
-plt.yscale('log') # Log scale helps see progress better
-plt.grid(True)
-plt.show()
-'''
 
 # Goal3: Plotting the graph after optimization to see whether it's improved
 
@@ -136,3 +125,7 @@ neural_net_plot(Z_space, theta, phi)
 
 # Plot histogram and pdf
 batman_plot(Z_space, theta, f_jax, phi, N_SAMPLES, RNG)
+
+# Goal4: Checking the zero variance estimator
+
+plot_diagnostic(theta, phi, f_jax, z_range=(-6, 6), n_points=1000)
