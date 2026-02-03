@@ -236,7 +236,7 @@ def plot_diagnostic(theta, phi, f, z_range=(-6, 6), n_points=1000):
     plt.title("Zero Variance Diagnostic Check")
     plt.xlabel("x (Transformed Value)")
     plt.ylabel("Weighted Value")
-    plt.yscale('log') # Log scale is crucial because spikes can be huge
+    # plt.yscale('log') # Log scale is crucial because spikes can be huge
     plt.grid(True, which="both", alpha=0.3)
     plt.legend()
     plt.show()

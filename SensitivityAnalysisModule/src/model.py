@@ -397,7 +397,7 @@ def Robbins_Monro(z_batch, theta, step_size, f, phi, V, L, score_fn, clip_thresh
 
     c_new = jnp.maximum(c_new, 0.5)
 
-    a_new = jnp.clip(a_new, 1.5, 3.0)
+    a_new = jnp.clip(a_new, 1.0, 3.0)
 
     # Restrict b instead of a
     max_b = d_new * (2.0 * a_new - 1.0)
