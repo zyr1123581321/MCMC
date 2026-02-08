@@ -271,6 +271,98 @@ def make_score_function(phi):
 
     return jit(score_batch)
 
+def make_mixing_likelihood_ratio(f, phi, p=0.1):
+    """
+    Computes the Defensive Likelihood Ratio
+    L(x, theta) = f(x) / [p*f(x) + (1-p)*g(x, theta)]
+    Input:
+        f: pdf of random variable Z
+        phi: the transformation function
+        p: The ratio of mixing
+    Output:
+        Vectorized L
+    """
+    phi_z = grad(phi, argnums=0)
+
+    def compute_mixing_L_single(z, theta):
+        """
+        Compute L for each individual z value
+        Input:
+            z: random variable samples
+            theta: Parameters for the transformation function
+        Output:
+            L(x, theta) = f(x) / h(x, theta) = f(x) / [p*f(x) + (1-p)*g(x, theta)] 
+            for g(x, theta) = f(z) / |phi_z|
+        """
+        x = phi(z, theta)
+        # slope = |phi_z|
+        slope = jnp.abs(phi_z(z, theta))
+
+        # Calculate g(x, theta):
+        # log g(x) = log(f(z)) - log(slope)
+
+        log_fx = -0.5 * (x**2)
+        log_fz = -0.5 * (z**2)
+        log_slope = jnp.log(slope + 1e-10)
+        log_gx = log_fz - log_slope
+
+        # Calculate h(x, theta)
+        # h(x, theta) = p*f(x) + (1-p)*g(x, theta)
+        # use logaddexp for log(A+B) which takes log(A) and log(B) as inputs
+        log_term_f = jnp.log(p) + log_fx
+        log_term_g = jnp.log(1 - p) + log_gx
+        log_hx = jnp.logaddexp(log_term_f, log_term_g)
+
+        # log(L(x, theta)) = log(f(x)) - log(h(x, theta))
+        log_L = log_fx - log_hx
+
+        return jnp.exp(log_L)
+
+    L_batch = vmap(compute_mixing_L_single, in_axes=(0, None))
+    return jit(L_batch)
+
+def make_mixing_score_function(phi, p=0.1):
+    """
+    Computes the Mixture Score function using the derived scaling factor:
+        S_mix = Beta * S_0
+        Beta = (1-p) / [p * phi_z + (1-p)]
+    The score function is the additional function generate after taking
+    derivative of the variance 
+    Input:
+        phi: the transformation function phi(z, theta)
+        p: The ratio of mixing
+    Output:
+        Vectorized score function
+    """
+    # Reuses the original score function
+    original_score_fn = make_score_function(phi)
+
+    # phi_z: (d_phi / d_z)
+    phi_z_fn = grad(phi, argnums=0)
+
+    def compute_mixing_score_batch(z_batch, theta):
+        """
+        Input:
+            z: random variable samples
+            theta: Parameters for the transformation function
+        Output:
+            S_mix = Beta * S_0 for
+            Beta = (1-p) / [p * phi_z + (1-p)]
+        """
+        # 1. Get the original score S_0
+        S_0 = original_score_fn(z_batch, theta)
+
+        # 2. Calculate the scaling factor 
+        slopes = vmap(phi_z_fn, in_axes=(0, None))(z_batch, theta)
+        abs_slopes = jnp.abs(slopes) + 1e-10
+
+        betas = (1 - p) / (p * abs_slopes + (1 - p))
+
+        # 3. Multiplication
+        return betas[:, None] * S_0
+
+    return jit(compute_mixing_score_batch)
+
 def loss_function(z_batch, theta, f, phi, V, L):
     """
     The loss (V(x)^2 * L(x, theta)^2) of the variable X

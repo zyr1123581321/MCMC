@@ -11,8 +11,16 @@ from jax import grad, vmap, jit
 from jax.scipy.stats import norm
 from scipy import stats
 
-from src.model import f_jax, phi, make_g_function, make_likelihood_ratio, \
- make_score_function, loss_function, gradient_loss, Robbins_Monro
+from src.model import (
+    f_jax, phi, 
+    make_g_function,
+    make_likelihood_ratio, 
+    make_score_function, 
+    make_mixing_likelihood_ratio,
+    make_mixing_score_function,
+    loss_function, 
+    Robbins_Monro
+)
 from src.utils import neural_net_plot, batman_plot, plot_diagnostic
 
 N_SAMPLES = 10000000
@@ -20,7 +28,7 @@ RNG = np.random.default_rng(17)
 CLIP_THRESHOLD = 100.0
 
 #----------------------------Main Program---------------------------
-# Goal1: Finding the distribution after neural net and check that the distribution
+# Goal 1: Finding the distribution after neural net and check that the distribution
 # matches the theoretical pdf
 
 a = 1.0
@@ -44,12 +52,12 @@ Z_space = np.linspace(-6.0, 6.0, 100)
 # Plot histogram and pdf
 #batman_plot(Z_space, theta, f_jax, phi, N_SAMPLES, RNG)
 
-# Goal2: Trying to find the optimized theta to get a batman graph
+# Goal 2: Trying to find the optimized theta to get a batman graph
 
 V = lambda z: z**4
 
 learning_rate = 0.0005
-
+mixing_ratio = 0.5
 
 batch_size = 1000
 num_iterations = N_SAMPLES // batch_size
@@ -57,8 +65,12 @@ theta_history = []
 loss_history = []
 smoothed_loss_history = []
 
-fast_score_fn = make_score_function(phi)
-fast_L_fn = make_likelihood_ratio(f_jax, phi)
+# For training
+fast_score_fn = make_mixing_score_function(phi, 0.1)
+fast_L_fn = make_mixing_likelihood_ratio(f_jax, phi, 0.1)
+
+# For Estimation of the mean
+true_L_fn = make_likelihood_ratio(f_jax, phi)
 
 # Initializing the tracking of the best parameter
 best_smoothed_loss = float('inf')
@@ -112,7 +124,7 @@ for i in range(num_iterations):
         # Calculate the actual estimate of the integral: Mean( V(x) * L(x) )
         # This should be close to 3.0
         x_current = phi(z_sample, theta)
-        L_current = fast_L_fn(z_sample, theta)
+        L_current = true_L_fn(z_sample, theta)
         integral_estimate = jnp.mean(V(x_current)* L_current)
         print(f"Iter {i:>4}: Loss={mean_loss:.4f} | Estimate={integral_estimate:.4f}")
 
