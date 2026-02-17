@@ -18,12 +18,13 @@ from src.model import (
     make_score_function, 
     make_mixing_likelihood_ratio,
     make_mixing_score_function,
-    loss_function, 
+    loss_function,
+    gradient_loss,
     Robbins_Monro
 )
 from src.utils import neural_net_plot, batman_plot, plot_diagnostic
 
-N_SAMPLES = 10000000
+N_SAMPLES = 1000000
 RNG = np.random.default_rng(17)
 CLIP_THRESHOLD = 100.0
 
@@ -42,6 +43,9 @@ d = 0.3
 a, b, c, d = 2.0, 0.5, 1.0, 0.2
 #
 
+
+
+
 theta = jnp.array([a, b, c, d])
 Z_space = np.linspace(-6.0, 6.0, 100)
 
@@ -57,17 +61,17 @@ Z_space = np.linspace(-6.0, 6.0, 100)
 V = lambda z: z**4
 
 learning_rate = 0.0005
-mixing_ratio = 0.5
+mixing_ratio = 0.1
 
-batch_size = 1000
+batch_size = 100
 num_iterations = N_SAMPLES // batch_size
 theta_history = []
 loss_history = []
 smoothed_loss_history = []
 
 # For training
-fast_score_fn = make_mixing_score_function(phi, 0.1)
-fast_L_fn = make_mixing_likelihood_ratio(f_jax, phi, 0.1)
+fast_score_fn = make_mixing_score_function(phi, mixing_ratio)
+fast_L_fn = make_mixing_likelihood_ratio(f_jax, phi, mixing_ratio)
 
 # For Estimation of the mean
 true_L_fn = make_likelihood_ratio(f_jax, phi)
@@ -104,7 +108,7 @@ for i in range(num_iterations):
         best_iter = i
 
     # 5. Run Optimizer
-    theta_new = Robbins_Monro(
+    theta_new, raw_grad, avg_grad = Robbins_Monro(
         z_sample,
         theta,
         learning_rate,
@@ -119,27 +123,28 @@ for i in range(num_iterations):
     theta = theta_new
     theta_history.append(theta)
 
-    if i % 1000 == 0:
-        print(f"Iter {i:>4}: Loss={mean_loss:.4f} | Theta={theta}")
+    if (i < 300 and i % 30 == 0) or (i >= 300 and i % 1000 == 0):
         # Calculate the actual estimate of the integral: Mean( V(x) * L(x) )
         # This should be close to 3.0
         x_current = phi(z_sample, theta)
         L_current = true_L_fn(z_sample, theta)
         integral_estimate = jnp.mean(V(x_current)* L_current)
-        print(f"Iter {i:>4}: Loss={mean_loss:.4f} | Estimate={integral_estimate:.4f}")
 
-print(f"\nFinal Theta:, {theta}, learning rate: {learning_rate}")
+        # Print theta AND the gradient magnitude
+        grad_mag = np.linalg.norm(raw_grad)
+        print(f"Iter {i:>4}: Loss={mean_loss:.4f} | Est={integral_estimate:.4f}")
+        print(f"           Theta: {theta}")
+        print(f"           Raw Grad : {raw_grad} (Mag: {grad_mag:.2f})")
+        print(f"           Trimmed Grad : {avg_grad}")
+
+print(f"\nFinal Theta:, {theta}, learning rate: {learning_rate}, mixing ratio: {mixing_ratio}")
 print(f"\nOptimal Theta, {best_theta}")
+
+
 
 # ---------- PLOTTING RESULTS ------------
 
-# 1. Process Data
-block_size = 100
-
-binned_loss = [np.mean(loss_history[i:i+block_size])
-            for i in range(0, len(loss_history), block_size)]
-
-# 2. Plot the Raw Data
+# 1. Plot the Raw Data
 plt.figure(figsize=(10, 5))
 plt.plot(loss_history, color='lightblue', alpha=0.5, label='Raw Batch Noise')
 
@@ -152,7 +157,7 @@ binned_loss = [np.mean(loss_history[i:i+block_size])
             for i in range(0, len(loss_history), block_size)]
 '''
 
-# 3. Plot the Smoothed Trend
+# 2. Plot the Smoothed Trend
 plt.plot(smoothed_loss_history, color='darkblue', linewidth=1.5, label='Smoothed Trend')
 plt.scatter(best_iter, best_smoothed_loss, color='red', s = 150, marker='*', label=f'Best Early Stop (Iter {best_iter})')
 

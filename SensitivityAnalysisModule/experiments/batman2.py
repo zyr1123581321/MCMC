@@ -92,7 +92,7 @@ for i in range(num_iterations):
         best_iter = i
 
     # 5. Run Optimizer
-    theta_new = Robbins_Monro(
+    theta_new, current_grad = Robbins_Monro(
         z_sample,
         theta,
         learning_rate,
@@ -107,14 +107,18 @@ for i in range(num_iterations):
     theta = theta_new
     theta_history.append(theta)
 
-    if i % 1000 == 0:
-        print(f"Iter {i:>4}: Loss={mean_loss:.4f} | Theta={theta}")
+    if (i < 300 and i % 30 == 0) or (i >= 300 and i % 1000 == 0):
         # Calculate the actual estimate of the integral: Mean( V(x) * L(x) )
         # This should be close to 3.0
         x_current = phi(z_sample, theta)
         L_current = fast_L_fn(z_sample, theta)
         integral_estimate = jnp.mean(V(x_current)* L_current)
-        print(f"Iter {i:>4}: Loss={mean_loss:.4f} | Estimate={integral_estimate:.4f}")
+
+        # Print theta AND the gradient magnitude
+        grad_mag = np.linalg.norm(current_grad)
+        print(f"Iter {i:>4}: Loss={mean_loss:.4f} | Est={integral_estimate:.4f}")
+        print(f"           Theta: {theta}")
+        print(f"           Grad : {current_grad} (Mag: {grad_mag:.2f})")
 
 print(f"\nFinal Theta:, {theta}, learning rate: {learning_rate}")
 print(f"\nOptimal Theta, {best_theta}")

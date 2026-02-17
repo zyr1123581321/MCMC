@@ -325,7 +325,7 @@ def make_mixing_score_function(phi, p=0.1):
     """
     Computes the Mixture Score function using the derived scaling factor:
         S_mix = Beta * S_0
-        Beta = (1-p) / [p * phi_z + (1-p)]
+        Beta = (1-p) / [p * (f(x)/f(z)) * |phi_z| + (1-p)]
     The score function is the additional function generate after taking
     derivative of the variance 
     Input:
@@ -340,6 +340,9 @@ def make_mixing_score_function(phi, p=0.1):
     # phi_z: (d_phi / d_z)
     phi_z_fn = grad(phi, argnums=0)
 
+    def log_f(u):
+            return -0.5 * u**2
+
     def compute_mixing_score_batch(z_batch, theta):
         """
         Input:
@@ -347,16 +350,22 @@ def make_mixing_score_function(phi, p=0.1):
             theta: Parameters for the transformation function
         Output:
             S_mix = Beta * S_0 for
-            Beta = (1-p) / [p * phi_z + (1-p)]
+            Beta = (1-p) / [p * (f(x)/f(z)) * |phi_z| + (1-p)]
         """
         # 1. Get the original score S_0
         S_0 = original_score_fn(z_batch, theta)
 
         # 2. Calculate the scaling factor 
+        x_batch = phi(z_batch, theta)
         slopes = vmap(phi_z_fn, in_axes=(0, None))(z_batch, theta)
         abs_slopes = jnp.abs(slopes) + 1e-10
 
-        betas = (1 - p) / (p * abs_slopes + (1 - p))
+        # 3. Calculate the ratio f(x)/f(z)
+        # ratio = exp(log_f(x) - log_f(z))
+        log_ratio = log_f(x_batch) - log_f(z_batch)
+        ratio = jnp.exp(log_ratio)
+
+        betas = (1 - p) / (p * ratio * abs_slopes + (1 - p))
 
         # 3. Multiplication
         return betas[:, None] * S_0
@@ -449,7 +458,9 @@ def Robbins_Monro(z_batch, theta, step_size, f, phi, V, L, score_fn, clip_thresh
     # If nothing left, skip the step
     if len(clean_grads) == 0:
         print("Warning: All gradients exploded. Skipping step.")
-        return theta
+        return theta, np.zeros_like(theta)
+
+    raw_mean_grad = np.mean(clean_grads, axis=0)
 
     # 3. Trimmed Mean (For now getting rid of top 20% and bottom 20%)
     avg_grad = stats.trim_mean(clean_grads, 0.2)
@@ -463,10 +474,6 @@ def Robbins_Monro(z_batch, theta, step_size, f, phi, V, L, score_fn, clip_thresh
 
     # 6. CONSTRAINT CHOICES
     a_new, b_new, c_new, d_new = theta_new
-
-    '''
-    '''
-
 
     # Attempt 2: b, d > 0, c >= 0.5, a <=5, 2a - b/d > 1 restricts b
     # (so the tail doesn't cluster like crazy)
@@ -532,4 +539,4 @@ def Robbins_Monro(z_batch, theta, step_size, f, phi, V, L, score_fn, clip_thresh
     # 7. Formulating final theta
     theta_final = jnp.array([a_new, b_new, c_new, d_new])
 
-    return theta_final
+    return theta_final, raw_mean_grad, avg_grad
