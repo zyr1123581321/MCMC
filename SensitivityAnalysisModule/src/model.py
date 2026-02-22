@@ -430,7 +430,7 @@ def gradient_loss(z_batch, theta, f, phi, V, L, score_fn):
 
     return raw_gradients
 
-def Robbins_Monro(z_batch, theta, step_size, f, phi, V, L, score_fn, clip_threshold):
+def Robbins_Monro(z_batch, theta, step_size, f, phi, V, L, score_fn, clip_threshold, trimming_ratio):
     """
     Gradient descent algorithm that uses the the gradient loss instead of the expected value
     theta_{n+1} = theta_n - step_size * G(x, theta_n)
@@ -462,11 +462,19 @@ def Robbins_Monro(z_batch, theta, step_size, f, phi, V, L, score_fn, clip_thresh
 
     raw_mean_grad = np.mean(clean_grads, axis=0)
 
+    if trimming_ratio == 0.0:
+        avg_grad = raw_mean_grad
+    else:
+        avg_grad = stats.trim_mean(clean_grads, trimming_ratio)
+
+    if clip_threshold is not None:
+        avg_grad = np.clip(avg_grad, -clip_threshold, clip_threshold)
+
     # 3. Trimmed Mean (For now getting rid of top 20% and bottom 20%)
-    avg_grad = stats.trim_mean(clean_grads, 0.2)
+    #avg_grad = stats.trim_mean(clean_grads, 0.05)
 
     # 4. Clipping
-    avg_grad = np.clip(avg_grad, -clip_threshold, clip_threshold)
+    #avg_grad = np.clip(avg_grad, -clip_threshold, clip_threshold)
 
 
     # 5. Update theta
@@ -498,10 +506,11 @@ def Robbins_Monro(z_batch, theta, step_size, f, phi, V, L, score_fn, clip_thresh
 
     a_new = jnp.clip(a_new, 1.0, 3.0)
 
+    '''
     # Restrict b instead of a
     max_b = d_new * (2.0 * a_new - 1.0)
     b_new = jnp.clip(b_new, 0.0, max_b)
-
+    '''
 
 
     '''
@@ -539,4 +548,4 @@ def Robbins_Monro(z_batch, theta, step_size, f, phi, V, L, score_fn, clip_thresh
     # 7. Formulating final theta
     theta_final = jnp.array([a_new, b_new, c_new, d_new])
 
-    return theta_final, raw_mean_grad, avg_grad
+    return theta_final, raw_mean_grad, avg_grad, clean_grads

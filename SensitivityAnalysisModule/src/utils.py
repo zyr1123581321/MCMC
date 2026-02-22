@@ -11,7 +11,7 @@ import jax
 import jax.numpy as jnp
 from jax import grad, vmap, jit
 from jax.scipy.stats import norm
-
+from scipy import stats
 
 def mean_estimator(N, V, rng):
     """
@@ -168,6 +168,8 @@ def batman_plot(Z_space, theta, f, phi, n_samples, rng):
         n_samples: Total sample size
         rng: the random number seed
     """
+    a, b, c, d = theta
+
     Z = rng.standard_normal(n_samples)
     X = phi(Z, theta)
     fast_g_fn = make_g_function(f, phi)
@@ -182,11 +184,32 @@ def batman_plot(Z_space, theta, f, phi, n_samples, rng):
 
     # The pdf of X
     plt.plot(X_theoretical, Y_theoretical, label="Theoretical pdf")
-    plt.title(f"The distribution of the neural net (N={n_samples})")
+    plt.title(f"The distribution of the neural net (N={n_samples}), theta = [{a:.2f}, {b:.2f}, {c:.2f}, {d:.2f}] ")
     plt.xlabel("X")
     plt.ylabel("Density")
     plt.grid(True, alpha=0.3)
 
+    plt.legend()
+    plt.show()
+
+def plot_smooth_loss(smoothed_loss_history, best_iter, best_smoothed_loss, trimming_ratio, clip_threshold):
+    plt.plot(smoothed_loss_history, color='darkblue', linewidth=1.5, label='Smoothed Trend')
+    plt.scatter(best_iter, best_smoothed_loss, color='red', s = 150, marker='*', label=f'Best Early Stop (Iter {best_iter})')
+
+    if trimming_ratio == 0.0:
+            trim_status = "Raw Data"
+    else:
+        trim_status = f"Trimmed ({trimming_ratio * 100:.0f})"
+
+    if clip_threshold is None:
+        clip_status = "Unclipped"
+    else:
+        clip_status = f"Clipped (±{clip_threshold})"
+    title = "Variance Reduction: Noise vs Trend"
+    full_title = f"{title} - {trim_status} - {clip_status}"
+
+    plt.yscale('log')
+    plt.title(full_title)
     plt.legend()
     plt.show()
 
@@ -243,3 +266,45 @@ def plot_diagnostic(theta, phi, f, z_range=(-6, 6), n_points=1000):
 
 # --- How to run it ---
 # plot_diagnostic(theta, phi, f_jax)
+
+def plot_gradient_snapshot(raw_grads, stage_name, param_names, batch_size, trimming_ratio, clip_threshold):
+    """
+    Plots a 2x2 grid of histograms for each parameter at a specific traning stage.
+    """
+    if raw_grads is None:
+        print(f"No data for {stage_name}")
+        return
+
+    fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(12,10))
+    axes = axes.flatten()
+
+    # Plot each histogram subplot with the mean and the trimmed mean
+    for i, ax in enumerate(axes):
+        grad_data = raw_grads[:,i]
+        ax.hist(grad_data, bins=30, color='skyblue', edgecolor='black', alpha=0.7)
+
+        mu = np.mean(grad_data)
+        trimmed_mean = stats.trim_mean(grad_data, 0.2)
+        ax.axvline(mu, color='red', linewidth=2, label=f'Mean: {mu:.2f}')
+        ax.axvline(trimmed_mean, color='purple', linestyle='dashed', label=f'Trimmed Mean: {trimmed_mean:.2f}')
+        ax.set_xlabel("Gradient Value")
+        ax.set_ylabel("Frequency")
+        ax.set_title(f"Histogram for the gradient of {param_names[i]}")
+        ax.grid(axis='y', alpha=0.3)
+        ax.legend()
+
+    if trimming_ratio == 0.0:
+        trim_status = "Raw Data"
+    else:
+        trim_status = f"Trimmed ({trimming_ratio * 100:.0f})"
+
+    if clip_threshold is None:
+        clip_status = "Unclipped"
+    else:
+        clip_status = f"Clipped (±{clip_threshold})"
+
+    title = f"Gradient Distribution: {stage_name} (Batch={batch_size})"
+    full_title = f"{title} - {trim_status} - {clip_status}"
+    plt.suptitle(full_title, fontsize=16)
+    plt.tight_layout()
+    plt.show()

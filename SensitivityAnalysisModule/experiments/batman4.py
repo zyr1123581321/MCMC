@@ -29,7 +29,7 @@ from src.utils import (
     plot_diagnostic,
     plot_gradient_snapshot
 )
-N_SAMPLES = 5000000
+N_SAMPLES = 20000000
 RNG = np.random.default_rng(17)
 CLIP_THRESHOLD = None
 
@@ -147,7 +147,7 @@ for i in range(num_iterations):
     theta = theta_new
     theta_history.append(theta)
 
-    if (i < 300 and i % 30 == 0) or (i >= 300 and i % 1000 == 0):
+    if (i < 500 and i % 30 == 0) or (i >= 300 and i % 1000 == 0):
         # Calculate the actual estimate of the integral: Mean( V(x) * L(x) )
         # This should be close to 3.0
         x_current = phi(z_sample, theta)
@@ -172,6 +172,18 @@ grad_history['best'] = {'iter': best_iter, 'grads': grads_best}
 # ---------- PLOTTING RESULTS ------------
 
 # Plot the histogram of the raw gradient loss
+param_names = ['a', 'b', 'c', 'd']
+
+for stage_name, data in grad_history.items():
+    # Unpack data from the dictionary
+    iteration = data['iter']
+    gradients = data['grads']
+
+    # Create labels for each stage
+    label = f"{stage_name} (Iter = {iteration})"
+
+    plot_gradient_snapshot(gradients, label, param_names, batch_size, TRIMMING_RATIO, CLIP_THRESHOLD)
+
 
 # 1. Plot the Raw Data
 plt.figure(figsize=(10, 5))
