@@ -96,21 +96,25 @@ The optimized importance distribution develops a characteristic bimodal ("batman
 
 ```
 .
-├── batman4.py               # Main optimization script
-├── src/
-│   ├── model.py             # Neural net φ, score functions, likelihood ratios,
-│   │                        #   loss function, Robbins–Monro optimizer
-│   └── utils.py             # Plotting utilities (distribution, loss curves,
-│                            #   gradient histograms, neural net visualization)
-├── reports/                  # Weekly progress reports (PDF)
-│   ├── Batman_011226.pdf     # Sensitivity analysis module & initial results
-│   ├── Batman_011826.pdf     # First batman distribution, sensitivity validation
-│   ├── Batman_012326.pdf     # Constraint design: restricting a vs. b
-│   ├── Batman_020226.pdf     # Early stopping & first mixing results
-│   ├── Batman_020726.pdf     # Mixing derivation correction, p=0.1 vs p=0.5
-│   ├── Batman_021726.pdf     # Score function derivation correction, trimming analysis
-│   └── Batman_022226.pdf     # Raw gradient histogram analysis, final results
-├── Notes.pdf                 # Theoretical notes by Prof. Goodman
+MCMC/
+├── Before Dec 2025/
+├── ReadingMaterials/
+├── SensitivityAnalysisModule/
+│   ├── experiments/
+│   ├── src/
+│   ├── tests/
+│   └── reports/
+│       ├── Batman_011226.pdf
+│       ├── Batman_011826.pdf
+│       ├── Batman_012326.pdf
+│       ├── Batman_020226.pdf
+│       ├── Batman_020726.pdf
+│       ├── Batman_021726.pdf
+│       ├── Batman_022226.pdf
+│       ├── SensitivityAnalysis_010426.pdf
+│       └── SensitivityAnalysis_110825.pdf
+├── .gitignore
+├── Notes.pdf
 └── README.md
 ```
 
